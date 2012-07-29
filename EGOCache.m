@@ -95,7 +95,7 @@ static EGOCache* __instance;
 		for(NSString* key in cacheDictionary) {
 			NSDate* date = [cacheDictionary objectForKey:key];
 			if([[[NSDate date] earlierDate:date] isEqualToDate:date]) {
-				[[NSFileManager defaultManager] removeItemAtPath:cachePathForKey(key) error:NULL];
+				[self removeItemFromCache:key];
 			}
 		}
 	}
