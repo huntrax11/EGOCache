@@ -108,14 +108,14 @@ static EGOCache* __instance;
 		[self removeItemFromCache:key];
 	}
 	
-	[self saveCacheDictionary];
+	[self performSelectorOnMainThread:@selector(saveAfterDelay) withObject:nil waitUntilDone:NO];
 }
 
 - (void)removeCacheForKey:(NSString*)key {
 	CHECK_FOR_EGOCACHE_PLIST();
 
 	[self removeItemFromCache:key];
-	[self saveCacheDictionary];
+	[self performSelectorOnMainThread:@selector(saveAfterDelay) withObject:nil waitUntilDone:NO];
 }
 
 - (void)removeItemFromCache:(NSString*)key {
