@@ -92,7 +92,8 @@ static EGOCache* __instance;
 												   attributes:nil 
 														error:NULL];
 		
-		for(NSString* key in cacheDictionary) {
+		NSDictionary *_cacheDictionary=[NSDictionary dictionaryWithDictionary:cacheDictionary];
+		for(NSString* key in _cacheDictionary) {
 			NSDate* date = [cacheDictionary objectForKey:key];
 			if([[[NSDate date] earlierDate:date] isEqualToDate:date]) {
 				[self removeItemFromCache:key];
@@ -104,7 +105,11 @@ static EGOCache* __instance;
 }
 
 - (void)clearCache {
-	for(NSString* key in [cacheDictionary allKeys]) {
+	NSDictionary *_cacheDictionary = nil;
+	@synchronized(cacheDictionary){
+		_cacheDictionary = [NSDictionary dictionaryWithDictionary:cacheDictionary];
+	}
+	for(NSString* key in [_cacheDictionary allKeys]) {
 		[self removeItemFromCache:key];
 	}
 	
@@ -127,7 +132,9 @@ static EGOCache* __instance;
 	[deleteInvocation setArgument:&cachePath atIndex:2];
 	
 	[self performDiskWriteOperation:deleteInvocation];
-	[cacheDictionary removeObjectForKey:key];
+	@synchronized(cacheDictionary){
+		[cacheDictionary removeObjectForKey:key];
+	}
 }
 
 - (BOOL)hasCacheForKey:(NSString*)key {
@@ -146,7 +153,9 @@ static EGOCache* __instance;
 
 - (void)copyFilePath:(NSString*)filePath asKey:(NSString*)key withTimeoutInterval:(NSTimeInterval)timeoutInterval {
 	[[NSFileManager defaultManager] copyItemAtPath:filePath toPath:cachePathForKey(key) error:NULL];
-	[cacheDictionary setObject:[NSDate dateWithTimeIntervalSinceNow:timeoutInterval] forKey:key];
+	@synchronized(cacheDictionary){
+		[cacheDictionary setObject:[NSDate dateWithTimeIntervalSinceNow:timeoutInterval] forKey:key];
+	}
 	[self performSelectorOnMainThread:@selector(saveAfterDelay) withObject:nil waitUntilDone:YES];
 }																												   
 
@@ -168,7 +177,9 @@ static EGOCache* __instance;
 	[writeInvocation setArgument:&cachePath atIndex:3];
 	
 	[self performDiskWriteOperation:writeInvocation];
-	[cacheDictionary setObject:[NSDate dateWithTimeIntervalSinceNow:timeoutInterval] forKey:key];
+	@synchronized(cacheDictionary){
+		[cacheDictionary setObject:[NSDate dateWithTimeIntervalSinceNow:timeoutInterval] forKey:key];
+	}
 	
 	[self performSelectorOnMainThread:@selector(saveAfterDelay) withObject:nil waitUntilDone:YES]; // Need to make sure the save delay get scheduled in the main runloop, not the current threads
 }
@@ -196,7 +207,11 @@ static EGOCache* __instance;
 
 - (void)saveCacheDictionary {
 	@synchronized(self) {
-		[cacheDictionary writeToFile:cachePathForKey(@"EGOCache.plist") atomically:YES];
+		NSDictionary *_cacheDictionary = nil;
+		@synchronized(cacheDictionary){
+			_cacheDictionary=[NSDictionary dictionaryWithDictionary:cacheDictionary];
+		}
+		[_cacheDictionary writeToFile:cachePathForKey(@"EGOCache.plist") atomically:YES];
 	}
 }
 
@@ -280,7 +295,9 @@ static EGOCache* __instance;
 
 - (void)performDiskWriteOperation:(NSInvocation *)invoction {
 	NSInvocationOperation *operation = [[NSInvocationOperation alloc] initWithInvocation:invoction];
-	[diskOperationQueue addOperation:operation];
+	@synchronized(diskOperationQueue){
+		[diskOperationQueue addOperation:operation];
+	}
 	[operation release];
 }
 
