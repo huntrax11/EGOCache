@@ -54,6 +54,7 @@ static inline NSString* cachePathForKey(NSString* key) {
 static EGOCache* __instance;
 
 @interface EGOCache ()
+- (void)invalidateCache;
 - (void)removeItemFromCache:(NSString*)key;
 - (void)performDiskWriteOperation:(NSInvocation *)invoction;
 - (void)saveCacheDictionary;
@@ -92,16 +93,25 @@ static EGOCache* __instance;
 												   attributes:nil 
 														error:NULL];
 		
-		NSDictionary *_cacheDictionary=[NSDictionary dictionaryWithDictionary:cacheDictionary];
-		for(NSString* key in _cacheDictionary) {
-			NSDate* date = [cacheDictionary objectForKey:key];
-			if([[[NSDate date] earlierDate:date] isEqualToDate:date]) {
-				[self removeItemFromCache:key];
-			}
-		}
+		[self performSelectorInBackground:@selector(invalidateCache) withObject:nil];
 	}
 	
 	return self;
+}
+
+- (void)invalidateCache {
+	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+	NSDictionary *_cacheDictionary = nil;
+	@synchronized(cacheDictionary){
+		_cacheDictionary = [NSDictionary dictionaryWithDictionary:cacheDictionary];
+	}
+	for(NSString* key in _cacheDictionary) {
+		NSDate* date = [cacheDictionary objectForKey:key];
+		if([[[NSDate date] earlierDate:date] isEqualToDate:date]) {
+			[self removeItemFromCache:key];
+		}
+	}
+	[pool release];
 }
 
 - (void)clearCache {
